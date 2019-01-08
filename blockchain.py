@@ -3,20 +3,21 @@ import json
 import datetime
 import hashlib
 
-app = Flask(__name__)
-
 class Blockchain:
    def __init__(self):
       self.chain=[]
+      self.create_block(proof=1,previous_hash="0")
 
    def create_block(self,proof,previous_hash):
       block={
-            'index':len(self.chain)+1,
-            'timestamp':str(datetime.datetime.now()),
-            'proof':proof,
-            'previous_hash':previous_hash
+            "index":len(self.chain)+1,
+            "timestamp":str(datetime.datetime.now()),
+            "proof":proof,
+            "previous_hash":previous_hash
          }
       self.chain.append(block)
+
+      return block
    
    def get_previous_block(self):
       return self.chain[-1]
@@ -52,6 +53,38 @@ class Blockchain:
          block_index+=1
       
       return True
-      
 
+#starting our web app
+app = Flask(__name__)
+
+#creating a new blockchain
+blockchain=Blockchain()
+
+#mining a new block
+@app.route("/mine_block",methods=["GET"])
+def mine_block():
+   previous_block=blockchain.get_previous_block()
+   previous_proof=previous_block["proof"]
+   proof=blockchain.proof_of_work(previous_proof)
+   previous_hash=blockchain.hash(previous_block)
+   block=blockchain.create_block(proof,previous_hash)
+   response={
+      "message":"Congrats! You just mined a block.",
+      "block_index":block["index"],
+      "timestamp":block["timestamp"],
+      "proof":block["proof"],
+      "previous_hash":block["previous_hash"]
+   }
+   return jsonify(response),200
+
+#getting the full chains
+@app.route("/get_chain",methods=["GET"])
+def get_chain():
+   response={
+      "chain":blockchain.chain,
+      "length":len(blockchain.chain)
+   }
+   return jsonify(response),200
+
+app.run(host="0.0.0.0",port=5000)
 
